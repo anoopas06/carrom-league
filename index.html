@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELCARE SYSTEMS - Carrom League</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f4037">
+
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#1f4037,#99f2c8);
+}
+.header{
+    background:#000;
+    color:#fff;
+    padding:15px;
+    text-align:center;
+    font-size:18px;
+    font-weight:bold;
+}
+.container{
+    background:#fff;
+    margin:10px;
+    padding:15px;
+    border-radius:12px;
+}
+select,input{
+    width:100%;
+    padding:8px;
+    margin:5px 0;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+button{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    background:#1f4037;
+    color:white;
+    border:none;
+    border-radius:8px;
+}
+button.secondary{
+    background:#444;
+}
+table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+th{
+    background:#1f4037;
+    color:white;
+    padding:8px;
+}
+td{
+    padding:6px;
+    border:1px solid #ddd;
+    text-align:center;
+}
+.highlight{
+    color:red;
+    font-weight:bold;
+}
+.crown{
+    background:#ffeaa7 !important;
+}
+.winner-box{
+    margin-top:15px;
+    padding:10px;
+    background:#ffeaa7;
+    border-radius:8px;
+    font-weight:bold;
+    text-align:center;
+}
+.history-box{
+    margin-top:15px;
+    padding:10px;
+    background:#eef7f3;
+    border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+ELCARE SYSTEMS - CARROM LEAGUE
+</div>
+
+<div class="container">
+
+<label>Date</label>
+<input type="date" id="matchDate">
+
+<label>Team 1</label>
+<select id="t1p1"></select>
+<select id="t1p2"></select>
+
+<label>Team 2</label>
+<select id="t2p1"></select>
+<select id="t2p2"></select>
+
+<label>Winner</label>
+<select id="winner">
+<option value="team1">Team 1</option>
+<option value="team2">Team 2</option>
+</select>
+
+<button onclick="addResult()">Add Result</button>
+<button class="secondary" onclick="endDay()">End Day & Save Winner</button>
+<button class="secondary" onclick="resetAll()">Reset League</button>
+
+<div id="dailyWinnerBox" class="winner-box" style="display:none;"></div>
+
+<div class="history-box">
+<b>Previous Winners</b>
+<div id="winnerHistory"></div>
+</div>
+
+<h3 style="text-align:center;">Point Table</h3>
+<table id="table"></table>
+
+</div>
+
+<script>
+
+let names=["Biju EB","Simon","Anoop","Jijo","Akhil","Roney","Shaju","Bijuraj"];
+
+let players = JSON.parse(localStorage.getItem("players")) || {};
+let dailyWins = JSON.parse(localStorage.getItem("dailyWins")) || {};
+let winnerHistory = JSON.parse(localStorage.getItem("winnerHistory")) || [];
+let activeCrownPlayers = JSON.parse(localStorage.getItem("crown")) || [];
+
+if(Object.keys(players).length===0){
+names.forEach(n=>{
+players[n]={m:0,w:0,l:0,p:0};
+});
+}
+
+function populateDropdowns(){
+["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
+let sel=document.getElementById(id);
+names.forEach(n=>{
+let opt=document.createElement("option");
+opt.value=n;
+opt.textContent=n;
+sel.appendChild(opt);
+});
+});
+}
+
+function saveData(){
+localStorage.setItem("players",JSON.stringify(players));
+localStorage.setItem("dailyWins",JSON.stringify(dailyWins));
+localStorage.setItem("winnerHistory",JSON.stringify(winnerHistory));
+localStorage.setItem("crown",JSON.stringify(activeCrownPlayers));
+}
+
+function updateHistory(){
+let box=document.getElementById("winnerHistory");
+box.innerHTML="";
+winnerHistory.forEach(item=>{
+box.innerHTML+=`<div>👑 <b>${item.date}</b> - ${item.names}</div>`;
+});
+}
+
+function updateTable(){
+let sorted=Object.keys(players).sort((a,b)=>players[b].p-players[a].p);
+let table=document.getElementById("table");
+
+table.innerHTML=`<tr>
+<th>R</th><th>Name</th><th>M</th><th>W</th><th>L</th><th>P</th>
+</tr>`;
+
+sorted.forEach((name,index)=>{
+let isCrown=activeCrownPlayers.includes(name);
+table.innerHTML+=`
+<tr class="${isCrown?'crown':''}">
+<td>${index+1}</td>
+<td>${isCrown?'👑 ':''}${name}</td>
+<td>${players[name].m}</td>
+<td class="highlight">${players[name].w}</td>
+<td>${players[name].l}</td>
+<td class="highlight">${players[name].p}</td>
+</tr>`;
+});
+}
+
+function addResult(){
+let date=document.getElementById("matchDate").value;
+if(!date){ alert("Select date"); return; }
+
+let t1p1=document.getElementById("t1p1").value;
+let t1p2=document.getElementById("t1p2").value;
+let t2p1=document.getElementById("t2p1").value;
+let t2p2=document.getElementById("t2p2").value;
+
+if(new Set([t1p1,t1p2,t2p1,t2p2]).size<4){
+alert("Same player cannot play twice!");
+return;
+}
+
+if(!dailyWins[date]) dailyWins[date]={};
+
+let win=document.getElementById("winner").value;
+let winners = win==="team1" ? [t1p1,t1p2] : [t2p1,t2p2];
+let losers  = win==="team1" ? [t2p1,t2p2] : [t1p1,t1p2];
+
+winners.forEach(p=>{
+players[p].m++;
+players[p].w++;
+players[p].p+=2;
+dailyWins[date][p]=(dailyWins[date][p]||0)+1;
+});
+
+losers.forEach(p=>{
+players[p].m++;
+players[p].l++;
+});
+
+saveData();
+updateTable();
+}
+
+function endDay(){
+let date=document.getElementById("matchDate").value;
+if(!date || !dailyWins[date]){
+alert("No matches for this date!");
+return;
+}
+
+let formattedDate=new Date(date).toLocaleDateString("en-GB");
+let maxWin=Math.max(...Object.values(dailyWins[date]));
+activeCrownPlayers=Object.keys(dailyWins[date])
+.filter(p=>dailyWins[date][p]===maxWin);
+
+let namesStr=activeCrownPlayers.join(" & ");
+
+document.getElementById("dailyWinnerBox").style.display="block";
+document.getElementById("dailyWinnerBox").innerHTML=
+"👑 <b>"+formattedDate+"</b> Winners: "+namesStr;
+
+winnerHistory.unshift({date:formattedDate,names:namesStr});
+
+saveData();
+updateHistory();
+updateTable();
+}
+
+function resetAll(){
+if(confirm("Reset entire league?")){
+localStorage.clear();
+location.reload();
+}
+}
+
+populateDropdowns();
+updateTable();
+updateHistory();
+
+</script>
+
+</body>
+</html>
