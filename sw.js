@@ -1,6 +1,6 @@
 self.addEventListener("install", function(event) {
   event.waitUntil(
-    caches.open("carrom-cache").then(function(cache) {
+    caches.open("carrom-cache-v2").then(function(cache) {
       return cache.addAll([
         "/",
         "/index.html",
