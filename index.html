@@ -165,11 +165,13 @@ function populateDropdowns(){
 }
 
 function saveData(){
-localStorage.setItem("players",JSON.stringify(players));
-localStorage.setItem("dailyWins",JSON.stringify(dailyWins));
-localStorage.setItem("winnerHistory",JSON.stringify(winnerHistory));
-localStorage.setItem("crown",JSON.stringify(activeCrownPlayers));
-localStorage.setItem("names",JSON.stringify(names));
+  set(ref(database, 'carromData'), {
+    players: players,
+    dailyWins: dailyWins,
+    winnerHistory: winnerHistory,
+    crown: crown,
+    names: names
+  });
 }
 
 function updateHistory(){
@@ -361,4 +363,5 @@ if ('serviceWorker' in navigator) {
 </body>
 
 </html>
+
 
