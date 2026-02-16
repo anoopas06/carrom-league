@@ -1,21 +1,39 @@
-self.addEventListener("install", function(event) {
+const CACHE_NAME = "carrom-cache-v3";
+
+self.addEventListener("install", function (event) {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open("carrom-cache-v2").then(function(cache) {
+    caches.open(CACHE_NAME).then(function (cache) {
       return cache.addAll([
-        "/",
-        "/index.html",
-        "/manifest.json",
-        "/icon-192.png",
-        "/icon-512.png"
+        "/carrom-league/",
+        "/carrom-league/index.html",
+        "/carrom-league/manifest.json",
+        "/carrom-league/icon-192.png",
+        "/carrom-league/icon-512.png"
       ]);
     })
   );
 });
 
-self.addEventListener("fetch", function(event) {
+self.addEventListener("activate", function (event) {
+  event.waitUntil(
+    caches.keys().then(function (names) {
+      return Promise.all(
+        names.map(function (name) {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
+          }
+        })
+      );
+    })
+  );
+  return self.clients.claim();
+});
+
+self.addEventListener("fetch", function (event) {
   event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request);
+    fetch(event.request).catch(function () {
+      return caches.match(event.request);
     })
   );
 });
