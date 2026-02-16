@@ -1,39 +1,24 @@
-const CACHE_NAME = "carrom-cache-v3";
+const CACHE_NAME = "carrom-league-v2";
 
-self.addEventListener("install", function (event) {
-  self.skipWaiting();
+const urlsToCache = [
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
+];
+
+self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll([
-        "/carrom-league/",
-        "/carrom-league/index.html",
-        "/carrom-league/manifest.json",
-        "/carrom-league/icon-192.png",
-        "/carrom-league/icon-512.png"
-      ]);
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
   );
 });
 
-self.addEventListener("activate", function (event) {
-  event.waitUntil(
-    caches.keys().then(function (names) {
-      return Promise.all(
-        names.map(function (name) {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
-          }
-        })
-      );
-    })
-  );
-  return self.clients.claim();
-});
-
-self.addEventListener("fetch", function (event) {
+self.addEventListener("fetch", event => {
   event.respondWith(
-    fetch(event.request).catch(function () {
-      return caches.match(event.request);
-    })
+    caches.match(event.request)
+      .then(response => response || fetch(event.request))
   );
 });
+ 

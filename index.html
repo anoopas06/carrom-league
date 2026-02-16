@@ -112,6 +112,12 @@ ELCARE SYSTEMS - CARROM LEAGUE
 </select>
 
 <button onclick="addResult()">Add Result</button>
+<button onclick="undoLast()">Undo</button>
+<h3>Add New Player</h3>
+
+<input type="text" id="newPlayerName" placeholder="Enter player name">
+
+<button onclick="addPlayer()">Add Player</button>
 <button class="secondary" onclick="endDay()">End Day & Save Winner</button>
 <button class="secondary" onclick="resetAll()">Reset League</button>
 
@@ -129,9 +135,11 @@ ELCARE SYSTEMS - CARROM LEAGUE
 
 <script>
 
-let names=["Biju EB","Simon","Anoop","Jijo","Akhil","Roney","Shaju","Bijuraj"];
+let names = JSON.parse(localStorage.getItem("names")) || 
+["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
 
 let players = JSON.parse(localStorage.getItem("players")) || {};
+let historyStack = [];
 let dailyWins = JSON.parse(localStorage.getItem("dailyWins")) || {};
 let winnerHistory = JSON.parse(localStorage.getItem("winnerHistory")) || [];
 let activeCrownPlayers = JSON.parse(localStorage.getItem("crown")) || [];
@@ -143,15 +151,17 @@ players[n]={m:0,w:0,l:0,p:0};
 }
 
 function populateDropdowns(){
-["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
-let sel=document.getElementById(id);
-names.forEach(n=>{
-let opt=document.createElement("option");
-opt.value=n;
-opt.textContent=n;
-sel.appendChild(opt);
-});
-});
+  ["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
+    let sel=document.getElementById(id);
+    sel.innerHTML = "";   // clear first
+
+    names.forEach(n=>{
+      let opt=document.createElement("option");
+      opt.value=n;
+      opt.textContent=n;
+      sel.appendChild(opt);
+    });
+  });
 }
 
 function saveData(){
@@ -159,6 +169,7 @@ localStorage.setItem("players",JSON.stringify(players));
 localStorage.setItem("dailyWins",JSON.stringify(dailyWins));
 localStorage.setItem("winnerHistory",JSON.stringify(winnerHistory));
 localStorage.setItem("crown",JSON.stringify(activeCrownPlayers));
+localStorage.setItem("names",JSON.stringify(names));
 }
 
 function updateHistory(){
@@ -192,6 +203,11 @@ table.innerHTML+=`
 }
 
 function addResult(){
+historyStack.push(JSON.stringify({
+  players,
+  dailyWins,
+  winnerHistory
+}));
 let date=document.getElementById("matchDate").value;
 if(!date){ alert("Select date"); return; }
 
@@ -262,25 +278,62 @@ location.reload();
 populateDropdowns();
 updateTable();
 updateHistory();
+function undoLast(){
+
+  if(historyStack.length === 0){
+    alert("Nothing to undo");
+    return;
+  }
+
+  let prev = JSON.parse(historyStack.pop());
+
+  players = prev.players;
+  dailyWins = prev.dailyWins;
+  winnerHistory = prev.winnerHistory;
+
+  saveData();
+  updateTable();
+  updateHistory();
+}
+
+function addPlayer() {
+
+  let name = document.getElementById("newPlayerName").value.trim();
+
+  if(name === ""){
+    alert("Enter player name");
+    return;
+  }
+
+  if(players[name]){
+    alert("Player already exists");
+    return;
+  }
+
+  players[name] = {m:0, w:0, l:0, p:0};
+  names.push(name);
+
+  saveData();
+
+  ["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
+    document.getElementById(id).innerHTML="";
+  });
+
+  populateDropdowns();
+  updateTable();
+
+  document.getElementById("newPlayerName").value = "";
+
+  alert("Player added successfully");
+}
 
 </script>
-
-<!-- 👇 Paste this code here -->
-
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js')
-      .then(function(registration) {
-        console.log('Service Worker registered successfully:', registration.scope);
-      })
-      .catch(function(error) {
-        console.log('Service Worker registration failed:', error);
-      });
-  });
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log("SW Registered"));
 }
 </script>
 
 </body>
-
 </html>
