@@ -328,6 +328,26 @@ function addPlayer() {
 }
 
 </script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyB8YZB8f1q1sdM0nnV2dTNL09qL6HsQWkA",
+    authDomain: "carrom-league-78929.firebaseapp.com",
+    databaseURL: "https://carrom-league-78929-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "carrom-league-78929",
+    storageBucket: "carrom-league-78929.firebasestorage.app",
+    messagingSenderId: "375848385973",
+    appId: "1:375848385973:web:d16bf3d139b230ac4bedfc"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js')
@@ -336,4 +356,5 @@ if ('serviceWorker' in navigator) {
 </script>
 
 </body>
+
 </html>
