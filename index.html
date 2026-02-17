@@ -133,108 +133,7 @@ ELCARE SYSTEMS - CARROM LEAGUE
 
 </div>
 
-<script>
-let names = [];
-let players = {};
-let historyStack = [];
-let dailyWins = {};
-let winnerHistory = [];
-let activeCrownPlayers = [];
-let crown = {};
 
-function populateDropdowns(){
-  ["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
-    let sel=document.getElementById(id);
-    sel.innerHTML = "";   // clear first
-
-    names.forEach(n=>{
-      let opt=document.createElement("option");
-      opt.value=n;
-      opt.textContent=n;
-      sel.appendChild(opt);
-    });
-  });
-}
-
-function saveData(){
-  set(ref(database, 'carromData'), {
-    players: players,
-    dailyWins: dailyWins,
-    winnerHistory: winnerHistory,
-    crown: crown,
-    names: names
-  });
-}
-
-function updateHistory(){
-let box=document.getElementById("winnerHistory");
-box.innerHTML="";
-winnerHistory.forEach(item=>{
-box.innerHTML+=`<div>👑 <b>${item.date}</b> - ${item.names}</div>`;
-});
-}
-
-function updateTable(){
-let sorted=Object.keys(players).sort((a,b)=>players[b].p-players[a].p);
-let table=document.getElementById("table");
-
-table.innerHTML=`<tr>
-<th>R</th><th>Name</th><th>M</th><th>W</th><th>L</th><th>P</th>
-</tr>`;
-
-sorted.forEach((name,index)=>{
-let isCrown=activeCrownPlayers.includes(name);
-table.innerHTML+=`
-<tr class="${isCrown?'crown':''}">
-<td>${index+1}</td>
-<td>${isCrown?'👑 ':''}${name}</td>
-<td>${players[name].m}</td>
-<td class="highlight">${players[name].w}</td>
-<td>${players[name].l}</td>
-<td class="highlight">${players[name].p}</td>
-</tr>`;
-});
-}
-
-function addResult(){
-historyStack.push(JSON.stringify({
-  players,
-  dailyWins,
-  winnerHistory
-}));
-let date=document.getElementById("matchDate").value;
-if(!date){ alert("Select date"); return; }
-
-let t1p1=document.getElementById("t1p1").value;
-let t1p2=document.getElementById("t1p2").value;
-let t2p1=document.getElementById("t2p1").value;
-let t2p2=document.getElementById("t2p2").value;
-
-if(new Set([t1p1,t1p2,t2p1,t2p2]).size<4){
-alert("Same player cannot play twice!");
-return;
-}
-
-if(!dailyWins[date]) dailyWins[date]={};
-
-let win=document.getElementById("winner").value;
-let winners = win==="team1" ? [t1p1,t1p2] : [t2p1,t2p2];
-let losers  = win==="team1" ? [t2p1,t2p2] : [t1p1,t1p2];
-
-winners.forEach(p=>{
-players[p].m++;
-players[p].w++;
-players[p].p+=2;
-dailyWins[date][p]=(dailyWins[date][p]||0)+1;
-});
-
-losers.forEach(p=>{
-players[p].m++;
-players[p].l++;
-});
-
-
-</script>
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
@@ -282,6 +181,7 @@ if ('serviceWorker' in navigator) {
 </body>
 
 </html>
+
 
 
 
