@@ -135,20 +135,6 @@ ELCARE SYSTEMS - CARROM LEAGUE
 
 <script>
 
-let names = JSON.parse(localStorage.getItem("names")) || 
-["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
-
-let players = JSON.parse(localStorage.getItem("players")) || {};
-let historyStack = [];
-let dailyWins = JSON.parse(localStorage.getItem("dailyWins")) || {};
-let winnerHistory = JSON.parse(localStorage.getItem("winnerHistory")) || [];
-let activeCrownPlayers = JSON.parse(localStorage.getItem("crown")) || [];
-
-if(Object.keys(players).length===0){
-names.forEach(n=>{
-players[n]={m:0,w:0,l:0,p:0};
-});
-}
 
 function populateDropdowns(){
   ["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
@@ -377,6 +363,7 @@ if ('serviceWorker' in navigator) {
 </body>
 
 </html>
+
 
 
 
