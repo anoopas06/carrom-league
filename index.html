@@ -233,93 +233,6 @@ players[p].m++;
 players[p].l++;
 });
 
-saveData();
-updateTable();
-}
-
-function endDay(){
-let date=document.getElementById("matchDate").value;
-if(!date || !dailyWins[date]){
-alert("No matches for this date!");
-return;
-}
-
-let formattedDate=new Date(date).toLocaleDateString("en-GB");
-let maxWin=Math.max(...Object.values(dailyWins[date]));
-activeCrownPlayers=Object.keys(dailyWins[date])
-.filter(p=>dailyWins[date][p]===maxWin);
-
-let namesStr=activeCrownPlayers.join(" & ");
-
-document.getElementById("dailyWinnerBox").style.display="block";
-document.getElementById("dailyWinnerBox").innerHTML=
-"👑 <b>"+formattedDate+"</b> Winners: "+namesStr;
-
-winnerHistory.unshift({date:formattedDate,names:namesStr});
-
-saveData();
-updateHistory();
-updateTable();
-}
-
-function resetAll(){
-if(confirm("Reset entire league?")){
-localStorage.clear();
-location.reload();
-}
-}
-
-populateDropdowns();
-updateTable();
-updateHistory();
-function undoLast(){
-
-  if(historyStack.length === 0){
-    alert("Nothing to undo");
-    return;
-  }
-
-  let prev = JSON.parse(historyStack.pop());
-
-  players = prev.players;
-  dailyWins = prev.dailyWins;
-  winnerHistory = prev.winnerHistory;
-
-  saveData();
-  updateTable();
-  updateHistory();
-}
-
-function addPlayer() {
-
-  let name = document.getElementById("newPlayerName").value.trim();
-
-  if(name === ""){
-    alert("Enter player name");
-    return;
-  }
-
-  if(players[name]){
-    alert("Player already exists");
-    return;
-  }
-
-  players[name] = {m:0, w:0, l:0, p:0};
-  names.push(name);
-
-  saveData();
-
-  ["t1p1","t1p2","t2p1","t2p2"].forEach(id=>{
-    document.getElementById(id).innerHTML="";
-  });
-
-  populateDropdowns();
-  updateTable();
-
-  document.getElementById("newPlayerName").value = "";
-
-  alert("Player added successfully");
-}
 
 </script>
 <script type="module">
@@ -369,6 +282,7 @@ if ('serviceWorker' in navigator) {
 </body>
 
 </html>
+
 
 
 
