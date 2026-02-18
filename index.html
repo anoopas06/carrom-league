@@ -2,189 +2,107 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<title>Carrom League</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELCARE SYSTEMS - Carrom League</title>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1f4037">
 
 <style>
 body{
-    margin:0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg,#1f4037,#99f2c8);
-}
-.header{
-    background:#000;
-    color:#fff;
-    padding:15px;
-    text-align:center;
-    font-size:18px;
-    font-weight:bold;
+  font-family: Arial;
+  background: linear-gradient(to bottom,#0f2027,#203a43,#2c5364);
+  margin:0;
+  padding:20px;
+  color:#000;
 }
 .container{
-    background:#fff;
-    margin:10px;
-    padding:15px;
-    border-radius:12px;
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  max-width:500px;
+  margin:auto;
 }
-select,input{
-    width:100%;
-    padding:8px;
-    margin:5px 0;
-    border-radius:6px;
-    border:1px solid #ccc;
+h2{
+  text-align:center;
+  color:#fff;
 }
 button{
-    width:100%;
-    padding:10px;
-    margin-top:8px;
-    background:#1f4037;
-    color:white;
-    border:none;
-    border-radius:8px;
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  background:#1e3c2f;
+  color:#fff;
+  border:none;
+  border-radius:8px;
 }
-button.secondary{
-    background:#444;
+input,select{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
 }
 table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:13px;
+  width:100%;
+  margin-top:15px;
+  border-collapse:collapse;
 }
-th{
-    background:#1f4037;
-    color:white;
-    padding:8px;
-}
-td{
-    padding:6px;
-    border:1px solid #ddd;
-    text-align:center;
-}
-.highlight{
-    color:red;
-    font-weight:bold;
-}
-.crown{
-    background:#ffeaa7 !important;
-}
-.winner-box{
-    margin-top:15px;
-    padding:10px;
-    background:#ffeaa7;
-    border-radius:8px;
-    font-weight:bold;
-    text-align:center;
-}
-.history-box{
-    margin-top:15px;
-    padding:10px;
-    background:#eef7f3;
-    border-radius:8px;
+th,td{
+  border:1px solid #ccc;
+  padding:6px;
+  text-align:center;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-ELCARE SYSTEMS - CARROM LEAGUE
-</div>
+<h2>ELCARE SYSTEMS - CARROM LEAGUE</h2>
 
 <div class="container">
 
-<label>Date</label>
-<input type="date" id="matchDate">
-
-<label>Team 1</label>
-<select id="t1p1"></select>
-<select id="t1p2"></select>
-
-<label>Team 2</label>
-<select id="t2p1"></select>
-<select id="t2p2"></select>
-
-<label>Winner</label>
-<select id="winner">
-<option value="team1">Team 1</option>
-<option value="team2">Team 2</option>
-</select>
-
-<button onclick="addResult()">Add Result</button>
-<button onclick="undoLast()">Undo</button>
 <h3>Add New Player</h3>
-
 <input type="text" id="newPlayerName" placeholder="Enter player name">
-
 <button onclick="addPlayer()">Add Player</button>
-<button class="secondary" onclick="endDay()">End Day & Save Winner</button>
-<button class="secondary" onclick="resetAll()">Reset League</button>
 
-<div id="dailyWinnerBox" class="winner-box" style="display:none;"></div>
-
-<div class="history-box">
-<b>Previous Winners</b>
-<div id="winnerHistory"></div>
-</div>
-
-<h3 style="text-align:center;">Point Table</h3>
+<h3>Point Table</h3>
 <table id="table"></table>
 
 </div>
 
-
-<script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue } 
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyB8YZB8f1q1sdM0nnV2dTNL09qL6HsQWkA",
-    authDomain: "carrom-league-78929.firebaseapp.com",
-    databaseURL: "https://carrom-league-78929-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "carrom-league-78929",
-    storageBucket: "carrom-league-78929.firebasestorage.app",
-    messagingSenderId: "375848385973",
-    appId: "1:375848385973:web:d16bf3d139b230ac4bedfc"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
- onValue(ref(database, 'carromData'), (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        players = data.players || {};
-        dailyWins = data.dailyWins || {};
-        winnerHistory = data.winnerHistory || [];
-        crown = data.crown || {};
-        names = data.names || [];
-
-        populateDropdowns();
-        updateTable();
-        updateHistory();
-    }
-});   
-</script>
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log("SW Registered"));
+let players = {};
+
+function addPlayer(){
+  let name = document.getElementById("newPlayerName").value.trim();
+
+  if(name === ""){
+    alert("Enter player name");
+    return;
+  }
+
+  if(players[name]){
+    alert("Player already exists");
+    return;
+  }
+
+  players[name] = { m:0, w:0, l:0, p:0 };
+  document.getElementById("newPlayerName").value = "";
+  updateTable();
+}
+
+function updateTable(){
+  let table = document.getElementById("table");
+  table.innerHTML = "<tr><th>Name</th><th>M</th><th>W</th><th>L</th><th>P</th></tr>";
+
+  Object.keys(players).forEach(name=>{
+    let row = `<tr>
+      <td>${name}</td>
+      <td>${players[name].m}</td>
+      <td>${players[name].w}</td>
+      <td>${players[name].l}</td>
+      <td>${players[name].p}</td>
+    </tr>`;
+    table.innerHTML += row;
+  });
 }
 </script>
 
 </body>
-
 </html>
-
-
-
-
-
-
-
