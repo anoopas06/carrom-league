@@ -328,12 +328,7 @@ function addPlayer() {
 }
 
 </script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log("SW Registered"));
-}
-</script>
+
 <script type="module">
   import { initializeApp } from 
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -359,3 +354,4 @@ if ('serviceWorker' in navigator) {
 </body>
 
 </html>
+
