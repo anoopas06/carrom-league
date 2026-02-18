@@ -164,13 +164,28 @@ function populateDropdowns(){
   });
 }
 
-function saveData(){
-localStorage.setItem("players",JSON.stringify(players));
-localStorage.setItem("dailyWins",JSON.stringify(dailyWins));
-localStorage.setItem("winnerHistory",JSON.stringify(winnerHistory));
-localStorage.setItem("crown",JSON.stringify(activeCrownPlayers));
-localStorage.setItem("names",JSON.stringify(names));
+async function saveData(){
+
+  // 🔹 Local backup
+  localStorage.setItem("players",JSON.stringify(players));
+  localStorage.setItem("dailyWins",JSON.stringify(dailyWins));
+  localStorage.setItem("winnerHistory",JSON.stringify(winnerHistory));
+  localStorage.setItem("crown",JSON.stringify(activeCrownPlayers));
+  localStorage.setItem("names",JSON.stringify(names));
+
+  // 🔥 Save to Firestore
+  await setDoc(doc(window.db, "league", "main"), {
+    players,
+    dailyWins,
+    winnerHistory,
+    activeCrownPlayers,
+    names,
+    updatedAt: Date.now()
+  });
+
+  console.log("🔥 Saved to Firestore");
 }
+
 
 function updateHistory(){
 let box=document.getElementById("winnerHistory");
@@ -355,5 +370,6 @@ function addPlayer() {
 </body>
 
 </html>
+
 
 
