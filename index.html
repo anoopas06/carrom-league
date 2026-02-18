@@ -185,7 +185,26 @@ async function saveData(){
 
   console.log("🔥 Saved to Firestore");
 }
+async function loadFromFirestore(){
+  const snap = await getDoc(doc(window.db, "league", "main"));
 
+  if(snap.exists()){
+    const data = snap.data();
+
+    players = data.players || {};
+    dailyWins = data.dailyWins || {};
+    winnerHistory = data.winnerHistory || [];
+    activeCrownPlayers = data.activeCrownPlayers || [];
+    names = data.names || names;
+
+    updateTable();
+    updateHistory();
+
+    console.log("Loaded from Firestore");
+  }
+}
+
+window.addEventListener("load", loadFromFirestore);
 
 function updateHistory(){
 let box=document.getElementById("winnerHistory");
@@ -370,6 +389,7 @@ function addPlayer() {
 </body>
 
 </html>
+
 
 
 
