@@ -383,12 +383,16 @@ function addPlayer() {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  window.db = db;
+window.db = db;
+window.setDoc = setDoc;
+window.doc = doc;
+window.getDoc = getDoc;
 </script>
 
 </body>
 
 </html>
+
 
 
 
