@@ -301,11 +301,36 @@ updateHistory();
 updateTable();
 }
 
-function resetAll(){
-if(confirm("Reset entire league?")){
-localStorage.clear();
-location.reload();
-}
+async function resetAll(){
+  if(confirm("Reset entire league?")){
+
+    // reset data
+    players = {};
+    dailyWins = {};
+    winnerHistory = [];
+    activeCrownPlayers = [];
+    names = ["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
+
+    // reinitialize players
+    names.forEach(n=>{
+      players[n] = {m:0, w:0, l:0, p:0};
+    });
+
+    // save empty data to Firestore
+    await setDoc(doc(window.db, "league", "main"), {
+      players,
+      dailyWins,
+      winnerHistory,
+      activeCrownPlayers,
+      names,
+      updatedAt: Date.now()
+    });
+
+    console.log("🔥 League reset in Firestore");
+
+    // reload app
+    location.reload();
+  }
 }
 
 populateDropdowns();
@@ -391,6 +416,7 @@ window.getDoc = getDoc;
 </body>
 
 </html>
+
 
 
 
