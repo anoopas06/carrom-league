@@ -135,14 +135,13 @@ ELCARE SYSTEMS - CARROM LEAGUE
 
 <script>
 
-let names = JSON.parse(localStorage.getItem("names")) || 
-["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
+let names = ["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
 
-let players = JSON.parse(localStorage.getItem("players")) || {};
+let players = {};
 let historyStack = [];
-let dailyWins = JSON.parse(localStorage.getItem("dailyWins")) || {};
-let winnerHistory = JSON.parse(localStorage.getItem("winnerHistory")) || [];
-let activeCrownPlayers = JSON.parse(localStorage.getItem("crown")) || [];
+let dailyWins = {};
+let winnerHistory = [];
+let activeCrownPlayers = [];
 
 if(Object.keys(players).length===0){
 names.forEach(n=>{
@@ -392,6 +391,7 @@ window.getDoc = getDoc;
 </body>
 
 </html>
+
 
 
 
