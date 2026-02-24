@@ -462,8 +462,10 @@ function launchFireworks() {
     particles = particles.filter(p => p.life > 0);
 
     if (particles.length > 0) {
-      requestAnimationFrame(animate);
-    }
+    requestAnimationFrame(animate);
+} else {
+    canvas.style.display = "none"; // 👈 auto hide
+}
   }
 
   animate();
@@ -473,6 +475,7 @@ function launchFireworks() {
 </body>
 
 </html>
+
 
 
 
