@@ -329,7 +329,7 @@ async function resetAll(){
     });
 
     // update names also
-    names = existingPlayers;
+    names = Object.keys(players);
 
     await setDoc(doc(window.db, "league", "main"), {
       players,
@@ -339,16 +339,14 @@ async function resetAll(){
       names,
       updatedAt: Date.now()
     });
-
+populateDropdowns();
+updateTable();
     console.log("🔥 League reset (players kept)");
 
-    location.reload();
+
   }
 }
 
-populateDropdowns();
-updateTable();
-updateHistory();
 function undoLast(){
 
   if(historyStack.length === 0){
@@ -473,6 +471,7 @@ canvas.style.display = "block";
 </body>
 
 </html>
+
 
 
 
