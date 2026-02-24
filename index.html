@@ -431,7 +431,9 @@ window.getDoc = getDoc;
 function launchFireworks() {
   const canvas = document.getElementById("fireworks");
   const ctx = canvas.getContext("2d");
-
+    
+canvas.style.display = "block";
+    
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
@@ -475,6 +477,7 @@ function launchFireworks() {
 </body>
 
 </html>
+
 
 
 
