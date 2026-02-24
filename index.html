@@ -466,11 +466,26 @@ canvas.style.display = "block";
 
   animate();
 }
+window.onload = async function () {
+    const docRef = doc(window.db, "league", "main");
+    const snap = await getDoc(docRef);
 
+    if (snap.exists()) {
+        let data = snap.data();
+
+        players = data.players || {};
+        names = data.names || Object.keys(players);
+
+        populateDropdowns();
+        updateTable();
+    }
+};
+    
 </script>
 </body>
 
 </html>
+
 
 
 
