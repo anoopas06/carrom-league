@@ -455,8 +455,8 @@ function launchFireworks() {
       p.y += p.vy;
       p.life--;
 
-      ctx.fillStyle = "orange";
-      ctx.fillRect(p.x, p.y, 4, 4);
+      ctx.fillStyle = "red";
+      ctx.fillRect(p.x, p.y, 6, 6);
     });
 
     particles = particles.filter(p => p.life > 0);
@@ -468,10 +468,12 @@ function launchFireworks() {
 
   animate();
 }
+
 </script>
 </body>
 
 </html>
+
 
 
 
