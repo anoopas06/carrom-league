@@ -304,19 +304,21 @@ updateTable();
 async function resetAll(){
   if(confirm("Reset entire league?")){
 
-    // reset data
+    // 🔥 keep existing players (including newly added)
+    const existingPlayers = Object.keys(players);
+
     players = {};
     dailyWins = {};
     winnerHistory = [];
     activeCrownPlayers = [];
-    names = ["Biju EB","Simon","Anoop","Jijo","Akhil","Roney"];
 
-    // reinitialize players
-    names.forEach(n=>{
-      players[n] = {m:0, w:0, l:0, p:0};
+    existingPlayers.forEach(n=>{
+      players[n] = {m:0,w:0,l:0,p:0};
     });
 
-    // save empty data to Firestore
+    // update names also
+    names = existingPlayers;
+
     await setDoc(doc(window.db, "league", "main"), {
       players,
       dailyWins,
@@ -326,9 +328,8 @@ async function resetAll(){
       updatedAt: Date.now()
     });
 
-    console.log("🔥 League reset in Firestore");
+    console.log("🔥 League reset (players kept)");
 
-    // reload app
     location.reload();
   }
 }
@@ -416,6 +417,7 @@ window.getDoc = getDoc;
 </body>
 
 </html>
+
 
 
 
