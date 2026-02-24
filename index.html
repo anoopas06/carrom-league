@@ -299,6 +299,8 @@ winnerHistory.unshift({date:formattedDate,names:namesStr});
 saveData();
 updateHistory();
 updateTable();
+const audio = new Audio("win.mp3");
+audio.play().catch(() => {});
 }
 
 async function resetAll(){
@@ -417,6 +419,7 @@ window.getDoc = getDoc;
 </body>
 
 </html>
+
 
 
 
