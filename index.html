@@ -247,19 +247,26 @@ let table=document.getElementById("table");
 
 table.innerHTML=`<tr>
 <th>R</th><th>Name</th><th>M</th><th>W</th><th>L</th><th>P</th>
+<th>Win %</th>
 </tr>`;
 
 sorted.forEach((name,index)=>{
-let isCrown=activeCrownPlayers.includes(name);
-table.innerHTML+=`
-<tr class="${isCrown?'crown':''}">
-<td>${index+1}</td>
-<td>${isCrown?'👑 ':''}${name}</td>
-<td>${players[name].m}</td>
-<td class="highlight">${players[name].w}</td>
-<td>${players[name].l}</td>
-<td class="highlight">${players[name].p}</td>
-</tr>`;
+  let isCrown = activeCrownPlayers.includes(name);
+
+  let winPercent = players[name].m > 0 
+    ? ((players[name].w / players[name].m) * 100).toFixed(1) 
+    : "0.0";
+
+  table.innerHTML += `
+  <tr class="${isCrown ? 'crown' : ''}">
+    <td>${index+1}</td>
+    <td>${isCrown ? '👑 ' : ''}${name}</td>
+    <td>${players[name].m}</td>
+    <td class="highlight">${players[name].w}</td>
+    <td>${players[name].l}</td>
+    <td class="highlight">${players[name].p}</td>
+    <td>${winPercent}%</td>
+  </tr>`;
 });
 }
 
