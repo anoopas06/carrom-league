@@ -224,7 +224,25 @@ box.innerHTML+=`<div>👑 <b>${item.date}</b> - ${item.names}</div>`;
 }
 
 function updateTable(){
-let sorted=Object.keys(players).sort((a,b)=>players[b].p-players[a].p);
+let sorted = Object.keys(players).sort((a, b) => {
+
+  // 1️⃣ Wins compare
+  if (players[b].w !== players[a].w) {
+    return players[b].w - players[a].w;
+  }
+
+  // 2️⃣ Win % compare
+  const winA = players[a].m > 0 ? players[a].w / players[a].m : 0;
+  const winB = players[b].m > 0 ? players[b].w / players[b].m : 0;
+
+  if (winB !== winA) {
+    return winB - winA;
+  }
+
+  // 3️⃣ Matches compare
+  return players[b].m - players[a].m;
+
+});
 let table=document.getElementById("table");
 
 table.innerHTML=`<tr>
