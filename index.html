@@ -464,6 +464,62 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+/* REPORT */
+.champion-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.05));
+  border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 12px;
+  padding: 14px;
+}
+.champion-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(251,191,36,0.4);
+}
+.champion-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.champion-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.week-label {
+  display: inline-block;
+  background: rgba(34,211,238,0.1);
+  border: 1px solid rgba(34,211,238,0.3);
+  color: var(--accent);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.match-log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
 /* SCROLLBAR */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -482,6 +538,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <div class="tab active" onclick="switchTab('match')">⚔️ Match</div>
   <div class="tab" onclick="switchTab('table')">🏆 Table</div>
   <div class="tab" onclick="switchTab('history')">📅 History</div>
+  <div class="tab" onclick="switchTab('report')">📊 Report</div>
   <div class="tab" onclick="switchTab('manage')">⚙️ Manage</div>
 </div>
 
@@ -543,6 +600,37 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   </div>
 </div>
 
+<!-- REPORT TAB -->
+<div id="tab-report" class="section">
+  <div class="card">
+    <div class="card-title">📊 Weekly Report</div>
+    <label>Select Week</label>
+    <input type="date" id="reportWeekDate" onchange="generateReport()">
+    <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">👆 ഏത് ദിവസവും select ചെയ്യൂ — ആ week-ന്റെ report കാണാം</p>
+  </div>
+
+  <div id="reportOutput" style="display:none;">
+    <div class="card" id="reportTopCard">
+      <div class="card-title">🥇 Week Champion</div>
+      <div id="reportTopPlayer"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Weekly Ranking</div>
+      <table class="pt-table" id="reportTable"></table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📅 Matches This Week</div>
+      <div id="reportMatches"></div>
+    </div>
+  </div>
+
+  <div id="reportEmpty" style="display:none;text-align:center;padding:30px;color:var(--text-muted);font-size:13px;">
+    😔 ഈ week-ൽ matches ഒന്നും ഇല്ല
+  </div>
+</div>
+
 <!-- MANAGE TAB -->
 <div id="tab-manage" class="section">
   <div class="card">
@@ -594,12 +682,19 @@ document.getElementById('wbtn1').classList.add('selected-t1');
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['match','table','history','manage'][i] === tab);
+    t.classList.toggle('active', ['match','table','history','report','manage'][i] === tab);
   });
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   if(tab==='table') updateTable();
   if(tab==='manage') updatePlayerList();
+  if(tab==='report') {
+    // set default to current week
+    if(!document.getElementById('reportWeekDate').value) {
+      document.getElementById('reportWeekDate').value = new Date().toISOString().split('T')[0];
+      generateReport();
+    }
+  }
 }
 
 function selectWinner(team) {
@@ -890,7 +985,119 @@ function closeModal(e) {
   }
 }
 
-// FIREWORKS
+function generateReport() {
+  const dateVal = document.getElementById('reportWeekDate').value;
+  if(!dateVal) return;
+
+  // Get week start (Monday) and end (Sunday)
+  const selected = new Date(dateVal);
+  const day = selected.getDay(); // 0=Sun
+  const diffToMon = (day === 0) ? -6 : 1 - day;
+  const weekStart = new Date(selected);
+  weekStart.setDate(selected.getDate() + diffToMon);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  // Format dates
+  const fmt = d => d.toLocaleDateString('en-GB');
+  const weekLabel = fmt(weekStart) + ' – ' + fmt(weekEnd);
+
+  // Filter matchLog for this week
+  const weekMatches = matchLog.filter(m => {
+    const md = new Date(m.date);
+    return md >= weekStart && md <= weekEnd;
+  });
+
+  const reportOutput = document.getElementById('reportOutput');
+  const reportEmpty = document.getElementById('reportEmpty');
+
+  if(weekMatches.length === 0) {
+    reportOutput.style.display = 'none';
+    reportEmpty.style.display = 'block';
+    return;
+  }
+
+  reportOutput.style.display = 'block';
+  reportEmpty.style.display = 'none';
+
+  // Calculate weekly stats per player
+  const weekStats = {};
+  Object.keys(players).forEach(n => { weekStats[n] = {m:0, w:0, l:0, p:0}; });
+
+  weekMatches.forEach(m => {
+    const winners = m.winner === 'team1' ? m.t1 : m.t2;
+    const losers  = m.winner === 'team1' ? m.t2 : m.t1;
+    winners.forEach(p => {
+      if(!weekStats[p]) weekStats[p] = {m:0,w:0,l:0,p:0};
+      weekStats[p].m++; weekStats[p].w++; weekStats[p].p+=2;
+    });
+    losers.forEach(p => {
+      if(!weekStats[p]) weekStats[p] = {m:0,w:0,l:0,p:0};
+      weekStats[p].m++; weekStats[p].l++;
+    });
+  });
+
+  // Sort by wins, then win%
+  const activePlayers = Object.keys(weekStats).filter(n => weekStats[n].m > 0);
+  const sorted = activePlayers.sort((a,b) => {
+    if(weekStats[b].w !== weekStats[a].w) return weekStats[b].w - weekStats[a].w;
+    const wA = weekStats[a].m > 0 ? weekStats[a].w/weekStats[a].m : 0;
+    const wB = weekStats[b].m > 0 ? weekStats[b].w/weekStats[b].m : 0;
+    return wB - wA;
+  });
+
+  // Champion box
+  const champ = sorted[0];
+  const champWp = weekStats[champ].m > 0 ? ((weekStats[champ].w/weekStats[champ].m)*100).toFixed(0) : 0;
+  document.getElementById('reportTopPlayer').innerHTML = `
+    <div class="week-label">📅 ${weekLabel}</div>
+    <div class="champion-box">
+      <div class="champion-avatar">👑</div>
+      <div>
+        <div class="champion-name">${champ}</div>
+        <div class="champion-sub">${weekStats[champ].w} wins · ${weekStats[champ].m} matches · ${champWp}% win rate</div>
+      </div>
+    </div>
+  `;
+
+  // Weekly ranking table
+  const rTable = document.getElementById('reportTable');
+  rTable.innerHTML = `<tr>
+    <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
+  </tr>`;
+  sorted.forEach((name, idx) => {
+    const s = weekStats[name];
+    const wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : 0;
+    const rankIcon = idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':(idx+1);
+    rTable.innerHTML += `<tr>
+      <td>${rankIcon}</td>
+      <td class="name-cell">${name}</td>
+      <td>${s.m}</td>
+      <td class="wins-cell">${s.w}</td>
+      <td style="color:var(--red)">${s.l}</td>
+      <td class="pts-cell">${s.p}</td>
+      <td style="color:var(--accent3)">${wp}%</td>
+    </tr>`;
+  });
+
+  // Match list
+  const matchDiv = document.getElementById('reportMatches');
+  matchDiv.innerHTML = [...weekMatches].reverse().map(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    const dateStr = new Date(m.date).toLocaleDateString('en-GB');
+    return `<div class="match-log-item">
+      <span style="font-size:16px;">🎯</span>
+      <div style="flex:1">
+        <div style="font-weight:600;color:var(--green)">${winners.join(' & ')}</div>
+        <div style="color:var(--text-muted)">vs ${losers.join(' & ')}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">${dateStr}</div>
+    </div>`;
+  }).join('');
+}
+
+
 function launchFireworks() {
   const canvas = document.getElementById("fireworks");
   const ctx = canvas.getContext("2d");
