@@ -536,8 +536,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('match')">⚔️ Match</div>
-  <div class="tab" onclick="switchTab('table')">🏆 Table</div>
-  <div class="tab" onclick="switchTab('history')">📅 History</div>
+  <div class="tab" onclick="switchTab('daily')">📅 Daily</div>
+  <div class="tab" onclick="switchTab('overall')">🏆 Overall</div>
+  <div class="tab" onclick="switchTab('history')">👑 History</div>
   <div class="tab" onclick="switchTab('report')">📊 Report</div>
   <div class="tab" onclick="switchTab('manage')">⚙️ Manage</div>
 </div>
@@ -584,14 +585,24 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   <button class="btn btn-gold" onclick="endDay()">👑 End Day & Save Winner</button>
 </div>
 
-<!-- TABLE TAB -->
-<div id="tab-table" class="section">
-  <div id="tableViewBanner" style="display:none;background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.05));border:1px solid rgba(251,191,36,0.3);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
-    <div style="font-size:13px;font-weight:600;color:var(--gold);" id="tableDateLabel">📅 Today's Table</div>
-    <button onclick="switchTableView()" id="tableToggleBtn" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.3);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">Overall</button>
+<!-- DAILY TAB -->
+<div id="tab-daily" class="section">
+  <div id="dailyNoData" style="display:none;text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;">
+    😔 ഇതുവരെ End Day ചെയ്തിട്ടില്ല.<br><br>Match add ചെയ്ത് End Day click ചെയ്യൂ.
   </div>
+  <div id="dailyTableWrap">
+    <div style="padding:8px 4px 10px;font-size:12px;color:var(--gold);font-weight:600;" id="dailyTableLabel">📅 Today's Standings</div>
+    <div class="card" style="padding:10px 8px;">
+      <table class="pt-table" id="dailyTable"></table>
+    </div>
+    <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:-4px;">Tap a player to view match history</p>
+  </div>
+</div>
+
+<!-- OVERALL TAB -->
+<div id="tab-overall" class="section">
   <div class="card" style="padding:10px 8px;">
-    <table class="pt-table" id="table"></table>
+    <table class="pt-table" id="overallTable"></table>
   </div>
   <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:-4px;">Tap a player to view match history</p>
 </div>
@@ -686,24 +697,16 @@ if(Object.keys(players).length===0){
 // Default winner btn
 document.getElementById('wbtn1').classList.add('selected-t1');
 
-// Date change → reset to overall if new day
-document.getElementById('matchDate').addEventListener('change', function() {
-  if(lastEndedDate && this.value !== lastEndedDate) {
-    tableViewMode = 'overall';
-    updateTable();
-  }
-});
-
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['match','table','history','report','manage'][i] === tab);
+    t.classList.toggle('active', ['match','daily','overall','history','report','manage'][i] === tab);
   });
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
-  if(tab==='table') updateTable();
+  if(tab==='daily') updateDailyTable();
+  if(tab==='overall') updateOverallTable();
   if(tab==='manage') updatePlayerList();
   if(tab==='report') {
-    // set default to current week
     if(!document.getElementById('reportWeekDate').value) {
       document.getElementById('reportWeekDate').value = new Date().toISOString().split('T')[0];
       generateReport();
@@ -762,6 +765,7 @@ async function saveData(){
   try {
     await setDoc(doc(window.db, "league", "main"), {
       players, dailyWins, winnerHistory, activeCrownPlayers, names, matchLog,
+      lastEndedDate: lastEndedDate || null,
       updatedAt: Date.now()
     });
   } catch(e) { console.log("Firestore save error", e); }
@@ -811,69 +815,58 @@ function updateHistory(){
   });
 }
 
-function updateTable(forceMode){
-  const mode = forceMode || tableViewMode;
+function updateTable(){ updateOverallTable(); updateDailyTable(); }
 
-  // Compute stats to display
-  let displayStats = {};
+function updateDailyTable(){
+  const noData = document.getElementById('dailyNoData');
+  const wrap = document.getElementById('dailyTableWrap');
 
-  if(mode === 'daily' && lastEndedDate) {
-    // Only that day's matches
-    const dayMatches = matchLog.filter(m => m.date === lastEndedDate);
-    Object.keys(players).forEach(n => { displayStats[n] = {m:0,w:0,l:0,p:0}; });
-    dayMatches.forEach(m => {
-      const winners = m.winner==='team1' ? m.t1 : m.t2;
-      const losers  = m.winner==='team1' ? m.t2 : m.t1;
-      winners.forEach(p => { if(displayStats[p]) { displayStats[p].m++; displayStats[p].w++; displayStats[p].p+=2; } });
-      losers.forEach(p => { if(displayStats[p]) { displayStats[p].m++; displayStats[p].l++; } });
-    });
-  } else {
-    // Overall — use players directly
-    displayStats = players;
+  if(!lastEndedDate) {
+    noData.style.display = 'block';
+    wrap.style.display = 'none';
+    return;
   }
 
-  // Update banner
-  const banner = document.getElementById('tableViewBanner');
-  const dateLabel = document.getElementById('tableDateLabel');
-  const toggleBtn = document.getElementById('tableToggleBtn');
+  noData.style.display = 'none';
+  wrap.style.display = 'block';
 
-  if(mode === 'daily' && lastEndedDate) {
-    banner.style.display = 'flex';
-    const fd = new Date(lastEndedDate).toLocaleDateString('en-GB');
-    dateLabel.textContent = '📅 ' + fd + ' - Daily Table';
-    toggleBtn.textContent = 'Overall →';
-  } else {
-    banner.style.display = lastEndedDate ? 'flex' : 'none';
-    if(lastEndedDate) {
-      dateLabel.textContent = '📊 Overall Table';
-      toggleBtn.textContent = '← Daily';
-    }
-  }
+  const fd = new Date(lastEndedDate).toLocaleDateString('en-GB');
+  document.getElementById('dailyTableLabel').textContent = '📅 ' + fd + ' Standings';
 
-  let sorted = Object.keys(displayStats).sort((a,b) => {
-    if(displayStats[b].w !== displayStats[a].w) return displayStats[b].w - displayStats[a].w;
-    const wA = displayStats[a].m > 0 ? displayStats[a].w/displayStats[a].m : 0;
-    const wB = displayStats[b].m > 0 ? displayStats[b].w/displayStats[b].m : 0;
-    if(wB !== wA) return wB - wA;
-    return displayStats[b].m - displayStats[a].m;
+  const dayMatches = matchLog.filter(m => m.date === lastEndedDate);
+  let dayStats = {};
+  Object.keys(players).forEach(n => { dayStats[n] = {m:0,w:0,l:0,p:0}; });
+  dayMatches.forEach(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    winners.forEach(p => { if(dayStats[p]) { dayStats[p].m++; dayStats[p].w++; dayStats[p].p+=2; } });
+    losers.forEach(p => { if(dayStats[p]) { dayStats[p].m++; dayStats[p].l++; } });
   });
 
-  let table = document.getElementById("table");
+  // Only show players who played that day
+  const activePlayers = Object.keys(dayStats).filter(n => dayStats[n].m > 0);
+  const sorted = activePlayers.sort((a,b) => {
+    if(dayStats[b].w !== dayStats[a].w) return dayStats[b].w - dayStats[a].w;
+    const wA = dayStats[a].m > 0 ? dayStats[a].w/dayStats[a].m : 0;
+    const wB = dayStats[b].m > 0 ? dayStats[b].w/dayStats[b].m : 0;
+    return wB - wA;
+  });
+
+  const table = document.getElementById('dailyTable');
   table.innerHTML = `<tr>
     <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
   </tr>`;
 
   sorted.forEach((name, index) => {
     let isCrown = activeCrownPlayers.includes(name);
-    let s = displayStats[name];
+    let s = dayStats[name];
     let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
-    let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
     let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
-
+    let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
     table.innerHTML += `
     <tr class="${isCrown ? 'crown' : ''}" onclick="showPlayerHistory('${name}')">
       <td><span class="${rankClass}">${rankIcon}</span></td>
-      <td class="name-cell ${isCrown ? 'crown-name' : ''}">${isCrown ? '👑 ' : ''}${name}</td>
+      <td class="name-cell ${isCrown?'crown-name':''}">${isCrown?'👑 ':''}${name}</td>
       <td>${s.m}</td>
       <td class="wins-cell">${s.w}</td>
       <td style="color:var(--red)">${s.l}</td>
@@ -883,9 +876,36 @@ function updateTable(forceMode){
   });
 }
 
-function switchTableView() {
-  tableViewMode = tableViewMode === 'daily' ? 'overall' : 'daily';
-  updateTable();
+function updateOverallTable(){
+  let sorted = Object.keys(players).sort((a,b) => {
+    if(players[b].w !== players[a].w) return players[b].w - players[a].w;
+    const wA = players[a].m > 0 ? players[a].w/players[a].m : 0;
+    const wB = players[b].m > 0 ? players[b].w/players[b].m : 0;
+    if(wB !== wA) return wB - wA;
+    return players[b].m - players[a].m;
+  });
+
+  let table = document.getElementById("overallTable");
+  table.innerHTML = `<tr>
+    <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
+  </tr>`;
+
+  sorted.forEach((name, index) => {
+    let isCrown = activeCrownPlayers.includes(name);
+    let wp = players[name].m > 0 ? ((players[name].w/players[name].m)*100).toFixed(0) : "0";
+    let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
+    let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
+    table.innerHTML += `
+    <tr class="${isCrown ? 'crown' : ''}" onclick="showPlayerHistory('${name}')">
+      <td><span class="${rankClass}">${rankIcon}</span></td>
+      <td class="name-cell ${isCrown ? 'crown-name' : ''}">${isCrown ? '👑 ' : ''}${name}</td>
+      <td>${players[name].m}</td>
+      <td class="wins-cell">${players[name].w}</td>
+      <td style="color:var(--red)">${players[name].l}</td>
+      <td class="pts-cell">${players[name].p}</td>
+      <td style="color:var(--accent3)">${wp}%</td>
+    </tr>`;
+  });
 }
 
 function updatePlayerList() {
@@ -1241,6 +1261,18 @@ function launchFireworks() {
     activeCrownPlayers = data.activeCrownPlayers || [];
     names = data.names || names;
     matchLog = data.matchLog || [];
+    lastEndedDate = data.lastEndedDate || null;
+
+    // Restore daily view if lastEndedDate is today
+    if(lastEndedDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if(lastEndedDate === today) {
+        tableViewMode = 'daily';
+      } else {
+        tableViewMode = 'overall';
+      }
+    }
+
     populateDropdowns();
     updateTable();
     updateHistory();
