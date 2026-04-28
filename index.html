@@ -924,12 +924,19 @@ function addResult(){
   let date = document.getElementById("matchDate").value;
   if(!date){ showToast("📅 Select a date!", true); return; }
 
+  // New day detected — reset daily tracking
+  if(lastEndedDate && date !== lastEndedDate) {
+    lastEndedDate = null;
+    activeCrownPlayers = [];
+    document.getElementById("dailyWinnerBox").style.display = "none";
+  }
+
   let t1p1 = document.getElementById("t1p1").value;
   let t1p2 = document.getElementById("t1p2").value;
   let t2p1 = document.getElementById("t2p1").value;
   let t2p2 = document.getElementById("t2p2").value;
 
-  historyStack.push(JSON.stringify({ players, dailyWins, winnerHistory, matchLog }));
+  historyStack.push(JSON.stringify({ players, dailyWins, winnerHistory, matchLog, lastEndedDate, activeCrownPlayers }));
 
   if(!dailyWins[date]) dailyWins[date] = {};
 
