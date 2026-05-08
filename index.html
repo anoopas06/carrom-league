@@ -984,11 +984,23 @@ function addResult(){
 
 function endDay(){
   let date = document.getElementById("matchDate").value;
-  if(!date || !dailyWins[date]){ showToast("No matches for this date!", true); return; }
+  if(!date){ showToast("No matches for this date!", true); return; }
+
+  const dayMatches = matchLog.filter(m => m.date === date);
+  if(dayMatches.length === 0){ showToast("No matches for this date!", true); return; }
+
+  // Calculate wins per player from matchLog for this date
+  let dayWins = {};
+  dayMatches.forEach(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    winners.forEach(p => {
+      dayWins[p] = (dayWins[p] || 0) + 1;
+    });
+  });
 
   let formattedDate = new Date(date).toLocaleDateString("en-GB");
-  let maxWin = Math.max(...Object.values(dailyWins[date]));
-  activeCrownPlayers = Object.keys(dailyWins[date]).filter(p => dailyWins[date][p]===maxWin);
+  let maxWin = Math.max(...Object.values(dayWins));
+  activeCrownPlayers = Object.keys(dayWins).filter(p => dayWins[p] === maxWin);
   let namesStr = activeCrownPlayers.join(" & ");
 
   document.getElementById("dailyWinnerBox").style.display = "block";
@@ -996,13 +1008,13 @@ function endDay(){
 
   winnerHistory.unshift({ date: formattedDate, names: namesStr });
 
-  // Switch table to daily view for this date
   lastEndedDate = date;
   tableViewMode = 'daily';
 
   saveData();
   updateHistory();
   updateTable();
+  updateMatchDailyTable();
   launchFireworks();
   const audio = new Audio("win.mp3");
   audio.play().catch(()=>{});
