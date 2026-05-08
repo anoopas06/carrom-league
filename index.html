@@ -591,6 +591,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <div id="todayMatchLog"></div>
     </div>
   </div>
+
+  <!-- DAILY TABLE IN MATCH TAB -->
+  <div id="matchDailyWrap" style="display:none;margin-top:12px;">
+    <div class="card" style="padding:10px 8px;">
+      <div class="card-title" id="matchDailyLabel">📅 Today's Standings</div>
+      <table class="pt-table" id="matchDailyTable"></table>
+    </div>
+  </div>
 </div>
 
 <!-- DAILY TAB -->
@@ -708,6 +716,7 @@ document.getElementById('wbtn1').classList.add('selected-t1');
 // Date change → update today's match log
 document.getElementById('matchDate').addEventListener('change', function() {
   updateTodayLog();
+  updateMatchDailyTable();
 });
 
 function switchTab(tab) {
@@ -969,6 +978,7 @@ function addResult(){
   saveData();
   updateTable();
   updateTodayLog();
+  updateMatchDailyTable();
   showToast("✅ Result added!");
 }
 
@@ -1026,6 +1036,7 @@ function undoLast(){
   updateTable();
   updateHistory();
   updateTodayLog();
+  updateMatchDailyTable();
   showToast("↩️ Undone!");
 }
 
@@ -1203,6 +1214,61 @@ function generateReport() {
 }
 
 
+function updateMatchDailyTable(){
+  const date = document.getElementById("matchDate").value;
+  const wrap = document.getElementById("matchDailyWrap");
+
+  if(!date) { wrap.style.display = 'none'; return; }
+
+  const dayMatches = matchLog.filter(m => m.date === date);
+  if(dayMatches.length === 0) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'block';
+
+  const fd = new Date(date).toLocaleDateString('en-GB');
+  document.getElementById('matchDailyLabel').textContent = '📅 ' + fd + ' Standings';
+
+  let dayStats = {};
+  Object.keys(players).forEach(n => { dayStats[n] = {m:0,w:0,l:0,p:0}; });
+  dayMatches.forEach(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    winners.forEach(p => { if(dayStats[p]) { dayStats[p].m++; dayStats[p].w++; dayStats[p].p+=2; } });
+    losers.forEach(p => { if(dayStats[p]) { dayStats[p].m++; dayStats[p].l++; } });
+  });
+
+  const activePlayers = Object.keys(dayStats).filter(n => dayStats[n].m > 0);
+  const sorted = activePlayers.sort((a,b) => {
+    if(dayStats[b].w !== dayStats[a].w) return dayStats[b].w - dayStats[a].w;
+    const wA = dayStats[a].m > 0 ? dayStats[a].w/dayStats[a].m : 0;
+    const wB = dayStats[b].m > 0 ? dayStats[b].w/dayStats[b].m : 0;
+    return wB - wA;
+  });
+
+  const table = document.getElementById('matchDailyTable');
+  table.innerHTML = `<tr>
+    <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
+  </tr>`;
+
+  sorted.forEach((name, index) => {
+    let isCrown = activeCrownPlayers.includes(name);
+    let s = dayStats[name];
+    let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
+    let rankIcon = index===0?'🥇':index===1?'🥈':index===2?'🥉':(index+1);
+    let rankClass = index===0?'rank-1':index===1?'rank-2':index===2?'rank-3':'';
+    table.innerHTML += `
+    <tr class="${isCrown?'crown':''}">
+      <td><span class="${rankClass}">${rankIcon}</span></td>
+      <td class="name-cell ${isCrown?'crown-name':''}">${isCrown?'👑 ':''}${name}</td>
+      <td>${s.m}</td>
+      <td class="wins-cell">${s.w}</td>
+      <td style="color:var(--red)">${s.l}</td>
+      <td class="pts-cell">${s.p}</td>
+      <td style="color:var(--accent3)">${wp}%</td>
+    </tr>`;
+  });
+}
+
 function updateTodayLog(){
   const date = document.getElementById("matchDate").value;
   const wrap = document.getElementById("todayLogWrap");
@@ -1214,19 +1280,60 @@ function updateTodayLog(){
   if(todayMatches.length === 0) { wrap.style.display = 'none'; return; }
 
   wrap.style.display = 'block';
-  logDiv.innerHTML = [...todayMatches].reverse().map((m, i) => {
+
+  let tableHTML = `
+  <table class="pt-table">
+    <tr>
+      <th>#</th>
+      <th style="text-align:left">Winners 🏅</th>
+      <th></th>
+    </tr>`;
+
+  todayMatches.forEach((m, i) => {
     const winners = m.winner==='team1' ? m.t1 : m.t2;
-    const losers  = m.winner==='team1' ? m.t2 : m.t1;
-    const matchNum = todayMatches.length - i;
-    return `
-    <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:12px;">
-      <div style="width:22px;height:22px;background:rgba(34,211,238,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;">${matchNum}</div>
-      <div style="flex:1;">
-        <div style="font-weight:700;color:var(--green);">🏅 ${winners.join(' & ')}</div>
-        <div style="color:var(--text-muted);margin-top:2px;">vs ${losers.join(' & ')}</div>
-      </div>
-    </div>`;
-  }).join('');
+    // Find actual index in matchLog
+    const globalIdx = matchLog.indexOf(m);
+    tableHTML += `
+    <tr>
+      <td style="color:var(--text-muted);font-size:12px;">${i+1}</td>
+      <td style="text-align:left;color:var(--green);font-weight:700;font-size:13px;">${winners.join(' & ')}</td>
+      <td><button onclick="deleteMatch(${globalIdx})" style="background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.3);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">❌</button></td>
+    </tr>`;
+  });
+
+  tableHTML += `</table>`;
+  logDiv.innerHTML = tableHTML;
+}
+
+function deleteMatch(idx){
+  if(!confirm("ഈ match delete ചെയ്യണോ?")) return;
+
+  const m = matchLog[idx];
+  if(!m) return;
+
+  // Reverse the stats
+  const winners = m.winner==='team1' ? m.t1 : m.t2;
+  const losers  = m.winner==='team1' ? m.t2 : m.t1;
+
+  winners.forEach(p => {
+    if(players[p]) { players[p].m--; players[p].w--; players[p].p-=2; }
+    if(dailyWins[m.date] && dailyWins[m.date][p]) {
+      dailyWins[m.date][p]--;
+      if(dailyWins[m.date][p] <= 0) delete dailyWins[m.date][p];
+    }
+  });
+  losers.forEach(p => {
+    if(players[p]) { players[p].m--; players[p].l--; }
+  });
+
+  // Remove from matchLog
+  matchLog.splice(idx, 1);
+
+  saveData();
+  updateTable();
+  updateTodayLog();
+  updateMatchDailyTable();
+  showToast("🗑️ Match deleted!");
 }
 
 function launchFireworks() {
