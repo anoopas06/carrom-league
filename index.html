@@ -583,6 +583,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <button class="btn btn-secondary" onclick="undoLast()">↩️ Undo</button>
   </div>
   <button class="btn btn-gold" onclick="endDay()">👑 End Day & Save Winner</button>
+
+  <!-- TODAY'S MATCH LOG -->
+  <div id="todayLogWrap" style="display:none;margin-top:12px;">
+    <div class="card">
+      <div class="card-title">🎯 Today's Matches</div>
+      <div id="todayMatchLog"></div>
+    </div>
+  </div>
 </div>
 
 <!-- DAILY TAB -->
@@ -696,6 +704,11 @@ if(Object.keys(players).length===0){
 
 // Default winner btn
 document.getElementById('wbtn1').classList.add('selected-t1');
+
+// Date change → update today's match log
+document.getElementById('matchDate').addEventListener('change', function() {
+  updateTodayLog();
+});
 
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => {
@@ -955,6 +968,7 @@ function addResult(){
 
   saveData();
   updateTable();
+  updateTodayLog();
   showToast("✅ Result added!");
 }
 
@@ -1011,6 +1025,7 @@ function undoLast(){
   saveData();
   updateTable();
   updateHistory();
+  updateTodayLog();
   showToast("↩️ Undone!");
 }
 
@@ -1187,6 +1202,32 @@ function generateReport() {
   }).join('');
 }
 
+
+function updateTodayLog(){
+  const date = document.getElementById("matchDate").value;
+  const wrap = document.getElementById("todayLogWrap");
+  const logDiv = document.getElementById("todayMatchLog");
+
+  if(!date) { wrap.style.display = 'none'; return; }
+
+  const todayMatches = matchLog.filter(m => m.date === date);
+  if(todayMatches.length === 0) { wrap.style.display = 'none'; return; }
+
+  wrap.style.display = 'block';
+  logDiv.innerHTML = [...todayMatches].reverse().map((m, i) => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    const matchNum = todayMatches.length - i;
+    return `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:6px;font-size:12px;">
+      <div style="width:22px;height:22px;background:rgba(34,211,238,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;">${matchNum}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700;color:var(--green);">🏅 ${winners.join(' & ')}</div>
+        <div style="color:var(--text-muted);margin-top:2px;">vs ${losers.join(' & ')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
 function launchFireworks() {
   const canvas = document.getElementById("fireworks");
