@@ -907,13 +907,22 @@ function updateOverallTable(){
     return players[b].m - players[a].m;
   });
 
+  // Find top score for overall crown
+  const topW = sorted.length > 0 ? players[sorted[0]].w : 0;
+  const topWp = sorted.length > 0 && players[sorted[0]].m > 0 ? players[sorted[0]].w/players[sorted[0]].m : 0;
+  const overallCrown = sorted.filter(n => {
+    const w = players[n].w;
+    const wp = players[n].m > 0 ? players[n].w/players[n].m : 0;
+    return w === topW && wp === topWp;
+  });
+
   let table = document.getElementById("overallTable");
   table.innerHTML = `<tr>
     <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
   </tr>`;
 
   sorted.forEach((name, index) => {
-    let isCrown = activeCrownPlayers.includes(name);
+    let isCrown = overallCrown.includes(name);
     let wp = players[name].m > 0 ? ((players[name].w/players[name].m)*100).toFixed(0) : "0";
     let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
     let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
@@ -1293,27 +1302,33 @@ function updateTodayLog(){
 
   wrap.style.display = 'block';
 
+  // Check if selected date is today
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = date === today;
+
   let tableHTML = `
   <table class="pt-table">
     <tr>
       <th>#</th>
       <th style="text-align:left">Winners 🏅</th>
-      <th></th>
+      ${isToday ? '<th></th>' : ''}
     </tr>`;
 
   todayMatches.forEach((m, i) => {
     const winners = m.winner==='team1' ? m.t1 : m.t2;
-    // Find actual index in matchLog
     const globalIdx = matchLog.indexOf(m);
     tableHTML += `
     <tr>
       <td style="color:var(--text-muted);font-size:12px;">${i+1}</td>
       <td style="text-align:left;color:var(--green);font-weight:700;font-size:13px;">${winners.join(' & ')}</td>
-      <td><button onclick="deleteMatch(${globalIdx})" style="background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.3);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">❌</button></td>
+      ${isToday ? `<td><button onclick="deleteMatch(${globalIdx})" style="background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.3);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">❌</button></td>` : ''}
     </tr>`;
   });
 
   tableHTML += `</table>`;
+  if(!isToday){
+    tableHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;text-align:center;">🔒 Previous day — view only</div>` + tableHTML;
+  }
   logDiv.innerHTML = tableHTML;
 }
 
