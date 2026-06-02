@@ -609,6 +609,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <table class="pt-table" id="matchDailyTable"></table>
     </div>
   </div>
+
+  <!-- LUNCH LEADERS TABLE (shown after close lunch) -->
+  <div id="lunchLeadersWrap" style="display:none;margin-top:12px;">
+    <div class="card" style="padding:10px 8px;">
+      <div class="card-title">☀️ LUNCH LEADERS</div>
+      <table class="pt-table" id="lunchLeadersTable"></table>
+    </div>
+  </div>
+
+  <!-- EVENING MATCHES SECTION (shown after close lunch) -->
+  <div id="eveningMatchesWrap" style="display:none;margin-top:12px;">
+    <div class="card">
+      <div class="card-title">🌙 Evening Matches</div>
+      <div id="eveningMatchLog"></div>
+    </div>
+  </div>
+
+  <!-- FINAL DAY STANDINGS (shown after close evening) -->
+  <div id="finalStandingsWrap" style="display:none;margin-top:12px;">
+    <div class="card" style="padding:10px 8px;">
+      <div class="card-title">📊 FINAL DAY STANDINGS</div>
+      <table class="pt-table" id="finalStandingsTable"></table>
+    </div>
+  </div>
 </div>
 
 <!-- DAILY TAB -->
@@ -728,6 +752,10 @@ document.getElementById('wbtn1').classList.add('selected-t1');
 document.getElementById('matchDate').addEventListener('change', function() {
   updateTodayLog();
   updateMatchDailyTable();
+  // Reset slot-based sections
+  document.getElementById('lunchLeadersWrap').style.display = 'none';
+  document.getElementById('eveningMatchesWrap').style.display = 'none';
+  document.getElementById('finalStandingsWrap').style.display = 'none';
 });
 
 function switchTab(tab) {
@@ -1025,9 +1053,98 @@ function closeLunch(){
   // Mark lunch as closed
   slotStatus[date].lunch = true;
 
+  // Hide today's matches section
+  document.getElementById("todayLogWrap").style.display = "none";
+  
+  // Show lunch leaders table
+  showLunchLeaders(date, lunchMatches);
+  
+  // Show evening matches section
+  showEveningSection(date);
+
   saveData();
-  let fd = new Date(date).toLocaleDateString("en-GB");
-  showToast("☀️ Lunch slot closed (" + fd + "). Evening slot still open!");
+  showToast("☀️ Lunch closed! Evening matches ready below.");
+}
+
+function showLunchLeaders(date, lunchMatches){
+  const wrap = document.getElementById('lunchLeadersWrap');
+  wrap.style.display = 'block';
+
+  const fd = new Date(date).toLocaleDateString('en-GB');
+  let lunchStats = {};
+  Object.keys(players).forEach(n => { lunchStats[n] = {m:0,w:0,l:0,p:0}; });
+  
+  lunchMatches.forEach(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    winners.forEach(p => { if(lunchStats[p]) { lunchStats[p].m++; lunchStats[p].w++; lunchStats[p].p+=2; } });
+    losers.forEach(p => { if(lunchStats[p]) { lunchStats[p].m++; lunchStats[p].l++; } });
+  });
+
+  const activePlayers = Object.keys(lunchStats).filter(n => lunchStats[n].m > 0);
+  const sorted = activePlayers.sort((a,b) => {
+    if(lunchStats[b].w !== lunchStats[a].w) return lunchStats[b].w - lunchStats[a].w;
+    const wA = lunchStats[a].m > 0 ? lunchStats[a].w/lunchStats[a].m : 0;
+    const wB = lunchStats[b].m > 0 ? lunchStats[b].w/lunchStats[b].m : 0;
+    return wB - wA;
+  });
+
+  const table = document.getElementById('lunchLeadersTable');
+  table.innerHTML = `<tr>
+    <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
+  </tr>`;
+
+  sorted.forEach((name, index) => {
+    let s = lunchStats[name];
+    let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
+    let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
+    let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
+    table.innerHTML += `
+    <tr>
+      <td><span class="${rankClass}">${rankIcon}</span></td>
+      <td class="name-cell">${name}</td>
+      <td>${s.m}</td>
+      <td class="wins-cell">${s.w}</td>
+      <td style="color:var(--red)">${s.l}</td>
+      <td class="pts-cell">${s.p}</td>
+      <td style="color:var(--accent3)">${wp}%</td>
+    </tr>`;
+  });
+}
+
+function showEveningSection(date){
+  const wrap = document.getElementById('eveningMatchesWrap');
+  wrap.style.display = 'block';
+  
+  const eveningMatches = matchLog.filter(m => m.date === date && m.timeSlot === 'evening');
+  const logDiv = document.getElementById("eveningMatchLog");
+  
+  if(eveningMatches.length === 0) {
+    logDiv.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:16px;font-size:13px;">No evening matches yet. Add matches below!</p>';
+    return;
+  }
+
+  let tableHTML = `
+  <table class="pt-table">
+    <tr>
+      <th>#</th>
+      <th style="text-align:left">Winners 🏅</th>
+      <th></th>
+    </tr>`;
+
+  eveningMatches.forEach((m, i) => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const globalIdx = matchLog.indexOf(m);
+    tableHTML += `
+    <tr>
+      <td style="color:var(--text-muted);font-size:12px;">${i+1}</td>
+      <td style="text-align:left;color:var(--green);font-weight:700;font-size:13px;">${winners.join(' & ')}</td>
+      <td><button onclick="deleteMatch(${globalIdx})" style="background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.3);color:var(--red);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px;">❌</button></td>
+    </tr>`;
+  });
+
+  tableHTML += `</table>`;
+  logDiv.innerHTML = tableHTML;
 }
 
 function closeEvening(){
@@ -1067,6 +1184,13 @@ function closeEvening(){
 
   winnerHistory.unshift({ date: formattedDate, names: namesStr });
 
+  // Hide lunch leaders and evening section, show final standings
+  document.getElementById("lunchLeadersWrap").style.display = "none";
+  document.getElementById("eveningMatchesWrap").style.display = "none";
+  
+  // Show final day standings
+  showFinalStandings(date, dayMatches);
+
   lastEndedDate = date;
   tableViewMode = 'daily';
 
@@ -1077,7 +1201,53 @@ function closeEvening(){
   launchFireworks();
   const audio = new Audio("win.mp3");
   audio.play().catch(()=>{});
-  showToast("🌙 Evening closed! Overall standings updated!");
+  showToast("🌙 Evening closed! Day complete. Overall standings updated!");
+}
+
+function showFinalStandings(date, dayMatches){
+  const wrap = document.getElementById('finalStandingsWrap');
+  wrap.style.display = 'block';
+
+  const fd = new Date(date).toLocaleDateString('en-GB');
+  let finalStats = {};
+  Object.keys(players).forEach(n => { finalStats[n] = {m:0,w:0,l:0,p:0}; });
+  
+  dayMatches.forEach(m => {
+    const winners = m.winner==='team1' ? m.t1 : m.t2;
+    const losers  = m.winner==='team1' ? m.t2 : m.t1;
+    winners.forEach(p => { if(finalStats[p]) { finalStats[p].m++; finalStats[p].w++; finalStats[p].p+=2; } });
+    losers.forEach(p => { if(finalStats[p]) { finalStats[p].m++; finalStats[p].l++; } });
+  });
+
+  const activePlayers = Object.keys(finalStats).filter(n => finalStats[n].m > 0);
+  const sorted = activePlayers.sort((a,b) => {
+    if(finalStats[b].w !== finalStats[a].w) return finalStats[b].w - finalStats[a].w;
+    const wA = finalStats[a].m > 0 ? finalStats[a].w/finalStats[a].m : 0;
+    const wB = finalStats[b].m > 0 ? finalStats[b].w/finalStats[b].m : 0;
+    return wB - wA;
+  });
+
+  const table = document.getElementById('finalStandingsTable');
+  table.innerHTML = `<tr>
+    <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
+  </tr>`;
+
+  sorted.forEach((name, index) => {
+    let s = finalStats[name];
+    let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
+    let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
+    let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
+    table.innerHTML += `
+    <tr>
+      <td><span class="${rankClass}">${rankIcon}</span></td>
+      <td class="name-cell">${name}</td>
+      <td>${s.m}</td>
+      <td class="wins-cell">${s.w}</td>
+      <td style="color:var(--red)">${s.l}</td>
+      <td class="pts-cell">${s.p}</td>
+      <td style="color:var(--accent3)">${wp}%</td>
+    </tr>`;
+  });
 }
 
 async function resetAll(){
