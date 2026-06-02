@@ -552,6 +552,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <label>Date</label>
     <input type="date" id="matchDate">
 
+    <label>Time Slot</label>
+    <select id="timeSlot">
+      <option value="">-- Select Time Slot --</option>
+      <option value="lunch">☀️ Lunch (1-2 PM)</option>
+      <option value="evening">🌙 Evening (6:30-10 PM)</option>
+    </select>
+
     <label>Team 1</label>
     <div class="team-badge team1-badge">TEAM 1</div>
     <div class="team-row">
@@ -582,7 +589,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     <button class="btn btn-primary" onclick="addResult()">✅ Add Result</button>
     <button class="btn btn-secondary" onclick="undoLast()">↩️ Undo</button>
   </div>
-  <button class="btn btn-gold" onclick="endDay()">👑 End Day & Save Winner</button>
+  <div class="btn-row">
+    <button class="btn btn-gold" onclick="closeLunch()">☀️ Close Lunch</button>
+    <button class="btn btn-gold" onclick="closeEvening()">🌙 Close Evening</button>
+  </div>
 
   <!-- TODAY'S MATCH LOG -->
   <div id="todayLogWrap" style="display:none;margin-top:12px;">
@@ -705,6 +715,7 @@ let matchLog = []; // {date, t1:[p1,p2], t2:[p1,p2], winner:'team1'/'team2'}
 let selectedWinner = 'team1';
 let tableViewMode = 'overall'; // 'daily' or 'overall'
 let lastEndedDate = null;
+let slotStatus = {}; // {date: {lunch: bool, evening: bool}}
 
 if(Object.keys(players).length===0){
   names.forEach(n => { players[n]={m:0,w:0,l:0,p:0}; });
@@ -783,10 +794,11 @@ async function saveData(){
   localStorage.setItem("crown", JSON.stringify(activeCrownPlayers));
   localStorage.setItem("names", JSON.stringify(names));
   localStorage.setItem("matchLog", JSON.stringify(matchLog));
+  localStorage.setItem("slotStatus", JSON.stringify(slotStatus));
 
   try {
     await setDoc(doc(window.db, "league", "main"), {
-      players, dailyWins, winnerHistory, activeCrownPlayers, names, matchLog,
+      players, dailyWins, winnerHistory, activeCrownPlayers, names, matchLog, slotStatus,
       lastEndedDate: lastEndedDate || null,
       updatedAt: Date.now()
     });
@@ -804,6 +816,7 @@ async function loadFromFirestore(){
       activeCrownPlayers = data.activeCrownPlayers || [];
       names = data.names || names;
       matchLog = data.matchLog || [];
+      slotStatus = data.slotStatus || {};
       populateDropdowns();
       updateTable();
       updateHistory();
@@ -953,7 +966,10 @@ function addResult(){
   }
 
   let date = document.getElementById("matchDate").value;
+  let timeSlot = document.getElementById("timeSlot").value;
+  
   if(!date){ showToast("📅 Select a date!", true); return; }
+  if(!timeSlot){ showToast("⏰ Select a time slot!", true); return; }
 
   // New day detected — reset daily tracking
   if(lastEndedDate && date !== lastEndedDate) {
@@ -967,7 +983,7 @@ function addResult(){
   let t2p1 = document.getElementById("t2p1").value;
   let t2p2 = document.getElementById("t2p2").value;
 
-  historyStack.push(JSON.stringify({ players, dailyWins, winnerHistory, matchLog, lastEndedDate, activeCrownPlayers }));
+  historyStack.push(JSON.stringify({ players, dailyWins, winnerHistory, matchLog, lastEndedDate, activeCrownPlayers, slotStatus }));
 
   if(!dailyWins[date]) dailyWins[date] = {};
 
@@ -981,8 +997,8 @@ function addResult(){
   });
   losers.forEach(p => { players[p].m++; players[p].l++; });
 
-  // Log the match
-  matchLog.push({ date, t1:[t1p1,t1p2], t2:[t2p1,t2p2], winner:win });
+  // Log the match with timeSlot
+  matchLog.push({ date, timeSlot, t1:[t1p1,t1p2], t2:[t2p1,t2p2], winner:win });
 
   saveData();
   updateTable();
@@ -991,14 +1007,48 @@ function addResult(){
   showToast("✅ Result added!");
 }
 
-function endDay(){
+function closeLunch(){
   let date = document.getElementById("matchDate").value;
-  if(!date){ showToast("No matches for this date!", true); return; }
+  if(!date){ showToast("📅 Select a date!", true); return; }
+
+  const lunchMatches = matchLog.filter(m => m.date === date && m.timeSlot === 'lunch');
+  if(lunchMatches.length === 0){ showToast("❌ No lunch matches for this date!", true); return; }
+
+  // Initialize slotStatus for this date if not exists
+  if(!slotStatus[date]) slotStatus[date] = { lunch: false, evening: false };
+
+  if(slotStatus[date].lunch) {
+    showToast("☀️ Lunch already closed!", true);
+    return;
+  }
+
+  // Mark lunch as closed
+  slotStatus[date].lunch = true;
+
+  saveData();
+  let fd = new Date(date).toLocaleDateString("en-GB");
+  showToast("☀️ Lunch slot closed (" + fd + "). Evening slot still open!");
+}
+
+function closeEvening(){
+  let date = document.getElementById("matchDate").value;
+  if(!date){ showToast("📅 Select a date!", true); return; }
 
   const dayMatches = matchLog.filter(m => m.date === date);
-  if(dayMatches.length === 0){ showToast("No matches for this date!", true); return; }
+  if(dayMatches.length === 0){ showToast("❌ No matches for this date!", true); return; }
 
-  // Calculate wins per player from matchLog for this date
+  // Initialize slotStatus for this date if not exists
+  if(!slotStatus[date]) slotStatus[date] = { lunch: false, evening: false };
+
+  if(slotStatus[date].evening) {
+    showToast("🌙 Evening already closed!", true);
+    return;
+  }
+
+  // Mark evening as closed
+  slotStatus[date].evening = true;
+
+  // Calculate wins per player from matchLog for this date (BOTH slots)
   let dayWins = {};
   dayMatches.forEach(m => {
     const winners = m.winner==='team1' ? m.t1 : m.t2;
@@ -1027,16 +1077,17 @@ function endDay(){
   launchFireworks();
   const audio = new Audio("win.mp3");
   audio.play().catch(()=>{});
+  showToast("🌙 Evening closed! Overall standings updated!");
 }
 
 async function resetAll(){
   if(confirm("Reset entire league? Players will be kept.")){
     const existingPlayers = Object.keys(players);
-    dailyWins = {}; winnerHistory = []; activeCrownPlayers = []; matchLog = [];
+    dailyWins = {}; winnerHistory = []; activeCrownPlayers = []; matchLog = []; slotStatus = {};
     existingPlayers.forEach(n => { players[n] = {m:0,w:0,l:0,p:0}; });
     names = Object.keys(players);
     await setDoc(doc(window.db, "league", "main"), {
-      players, dailyWins, winnerHistory, activeCrownPlayers, names, matchLog, updatedAt: Date.now()
+      players, dailyWins, winnerHistory, activeCrownPlayers, names, matchLog, slotStatus, updatedAt: Date.now()
     });
     populateDropdowns();
     updateTable();
@@ -1053,6 +1104,8 @@ function undoLast(){
   dailyWins = prev.dailyWins;
   winnerHistory = prev.winnerHistory;
   matchLog = prev.matchLog || matchLog;
+  activeCrownPlayers = prev.activeCrownPlayers || activeCrownPlayers;
+  slotStatus = prev.slotStatus || slotStatus;
   saveData();
   updateTable();
   updateHistory();
@@ -1356,6 +1409,11 @@ function deleteMatch(idx){
   // Remove from matchLog
   matchLog.splice(idx, 1);
 
+  // Reset slot status for this date if match is deleted
+  if(slotStatus[m.date]) {
+    slotStatus[m.date][m.timeSlot] = false;
+  }
+
   saveData();
   updateTable();
   updateTodayLog();
@@ -1443,6 +1501,7 @@ function launchFireworks() {
     activeCrownPlayers = data.activeCrownPlayers || [];
     names = data.names || names;
     matchLog = data.matchLog || [];
+    slotStatus = data.slotStatus || {};
     lastEndedDate = data.lastEndedDate || null;
 
     // Restore daily view if lastEndedDate is today
