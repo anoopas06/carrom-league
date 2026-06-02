@@ -758,6 +758,17 @@ document.getElementById('matchDate').addEventListener('change', function() {
   document.getElementById('finalStandingsWrap').style.display = 'none';
 });
 
+// Time slot change → hide lunch matches if evening selected after lunch closed
+document.getElementById('timeSlot').addEventListener('change', function() {
+  const timeSlot = this.value;
+  const date = document.getElementById("matchDate").value;
+  
+  if(timeSlot === 'evening' && slotStatus[date] && slotStatus[date].lunch) {
+    // Lunch is closed, hide today's matches (lunch matches)
+    document.getElementById('todayLogWrap').style.display = 'none';
+  }
+});
+
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach((t,i) => {
     t.classList.toggle('active', ['match','daily','overall','history','report','manage'][i] === tab);
@@ -1231,15 +1242,25 @@ function showFinalStandings(date, dayMatches){
     <th>R</th><th style="text-align:left">Name</th><th>M</th><th>W</th><th>L</th><th>P</th><th>W%</th>
   </tr>`;
 
+  // Calculate crown for top player(s)
+  const topW = sorted.length > 0 ? finalStats[sorted[0]].w : 0;
+  const topWp = sorted.length > 0 && finalStats[sorted[0]].m > 0 ? finalStats[sorted[0]].w/finalStats[sorted[0]].m : 0;
+  const dayCrown = sorted.filter(n => {
+    const w = finalStats[n].w;
+    const wp = finalStats[n].m > 0 ? finalStats[n].w/finalStats[n].m : 0;
+    return w === topW && wp === topWp;
+  });
+
   sorted.forEach((name, index) => {
     let s = finalStats[name];
     let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
     let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
     let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
+    let isCrown = dayCrown.includes(name);
     table.innerHTML += `
-    <tr>
+    <tr class="${isCrown ? 'crown' : ''}">
       <td><span class="${rankClass}">${rankIcon}</span></td>
-      <td class="name-cell">${name}</td>
+      <td class="name-cell ${isCrown ? 'crown-name' : ''}">${isCrown ? '👑 ' : ''}${name}</td>
       <td>${s.m}</td>
       <td class="wins-cell">${s.w}</td>
       <td style="color:var(--red)">${s.l}</td>
