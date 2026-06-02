@@ -921,15 +921,14 @@ function updateDailyTable(){
   </tr>`;
 
   sorted.forEach((name, index) => {
-    let isCrown = activeCrownPlayers.includes(name);
     let s = dayStats[name];
     let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
     let rankIcon = index===0 ? '🥇' : index===1 ? '🥈' : index===2 ? '🥉' : (index+1);
     let rankClass = index===0 ? 'rank-1' : index===1 ? 'rank-2' : index===2 ? 'rank-3' : '';
     table.innerHTML += `
-    <tr class="${isCrown ? 'crown' : ''}" onclick="showPlayerHistory('${name}')">
+    <tr onclick="showPlayerHistory('${name}')">
       <td><span class="${rankClass}">${rankIcon}</span></td>
-      <td class="name-cell ${isCrown?'crown-name':''}">${isCrown?'👑 ':''}${name}</td>
+      <td class="name-cell">${name}</td>
       <td>${s.m}</td>
       <td class="wins-cell">${s.w}</td>
       <td style="color:var(--red)">${s.l}</td>
@@ -1495,15 +1494,14 @@ function updateMatchDailyTable(){
   </tr>`;
 
   sorted.forEach((name, index) => {
-    let isCrown = activeCrownPlayers.includes(name);
     let s = dayStats[name];
     let wp = s.m > 0 ? ((s.w/s.m)*100).toFixed(0) : "0";
     let rankIcon = index===0?'🥇':index===1?'🥈':index===2?'🥉':(index+1);
     let rankClass = index===0?'rank-1':index===1?'rank-2':index===2?'rank-3':'';
     table.innerHTML += `
-    <tr class="${isCrown?'crown':''}">
+    <tr>
       <td><span class="${rankClass}">${rankIcon}</span></td>
-      <td class="name-cell ${isCrown?'crown-name':''}">${isCrown?'👑 ':''}${name}</td>
+      <td class="name-cell">${name}</td>
       <td>${s.m}</td>
       <td class="wins-cell">${s.w}</td>
       <td style="color:var(--red)">${s.l}</td>
